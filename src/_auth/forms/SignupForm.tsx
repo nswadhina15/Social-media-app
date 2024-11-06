@@ -1,17 +1,20 @@
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form";
 import { SignupValidation } from "@/lib/validation";
 import { Loader } from "lucide-react";
 import { Link } from "react-router-dom";
+import {createUserAccount} from "@/lib/appwrite/api";
 
 
 
 
 const SignupForm = () => {
+  const { toast } = useToast()
   const isLoading = false;
 
   // 1. Define your form.
@@ -27,7 +30,15 @@ const SignupForm = () => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof SignupValidation>) {
-    // const newUser = await createUserAccount(values);
+    const newUser = await createUserAccount(values);
+    
+    if(!newUser) {
+      return  toast({
+        title: "Sign up failed. Please try again.",
+      });
+    }
+
+    // const session = await signInAccount()
   }
   return (
     <Form {...form}>
@@ -94,7 +105,7 @@ const SignupForm = () => {
           <Button type="submit" className="shad-button_primary">
             {isLoading ? (
               <div className="flex-center gap-2">
-                <Loader/>Loading...
+                <Loader className="mr-2"/>Loading...
               </div>
             ): "Sign up"}
           </Button>
