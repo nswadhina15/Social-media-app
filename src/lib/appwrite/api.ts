@@ -84,3 +84,13 @@ export async function getCurrentUser() {
         return null;  // Return null to indicate no user found
     }
 }
+
+
+export async function signOutAccount() {
+    try {
+        const session = await account.deleteSession("current");
+        return session;
+    } catch (error) {
+        console.log(error)
+    }
+}
