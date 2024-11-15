@@ -7,15 +7,25 @@ import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form";
 import { SignupValidation } from "@/lib/validation";
 import { Loader } from "lucide-react";
-import { Link } from "react-router-dom";
-import {createUserAccount} from "@/lib/appwrite/api";
-
-
+import { Link, useNavigate } from "react-router-dom";
+import { useCreateUserAccount, useSignInAccount } from "@/lib/react-query/queriesAndMutations";
+import { useUserContext } from "@/context/AuthContext";
 
 
 const SignupForm = () => {
   const { toast } = useToast()
-  const isLoading = false;
+  const {checkAuthUser, isLoading: isUserLoading} = useUserContext();
+  const navigate = useNavigate();
+
+  const { mutateAsync: createUserAccount, isPending: isCreatingAccount } = useCreateUserAccount();
+  const { mutateAsync: signInAccount, isPending: isSigningInUser } = useSignInAccount();
+
+  const createUserMutation = useCreateUserAccount();
+const signInMutation = useSignInAccount();
+
+console.log('Create User Mutation:', createUserMutation);
+console.log('Sign In Mutation:', signInMutation);
+
 
   // 1. Define your form.
   const form = useForm<z.infer<typeof SignupValidation>>({
@@ -30,16 +40,42 @@ const SignupForm = () => {
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof SignupValidation>) {
-    const newUser = await createUserAccount(values);
-    
-    if(!newUser) {
-      return  toast({
-        title: "Sign up failed. Please try again.",
+    try {
+      // Step 1: Create the user account
+      const newUser = await createUserAccount(values);
+      
+      if (!newUser) {
+        toast({ title: "Sign up failed. Please try again." });
+        return;
+      }
+  
+      // Step 2: Sign in with the newly created account
+      const session = await signInAccount({
+        email: values.email,
+        password: values.password,
       });
+  
+      if (!session) {
+        toast({ title: 'Sign in failed. Please try again.' });
+        return;
+      }
+  
+      // Step 3: Verify if the user is authenticated
+      const isLoggedIn = await checkAuthUser();
+  
+      if (isLoggedIn) {
+        form.reset();
+        navigate('/');
+      } else {
+        toast({ title: 'Sign up failed. Please try again.' });
+      }
+    } catch (error) {
+      console.error('Error during signup:', error);
+      toast({ title: 'An error occurred. Please try again.' });
     }
-
-    // const session = await signInAccount()
   }
+
+  
   return (
     <Form {...form}>
       <div className="sm:w-420 flex-center flex-col">
@@ -103,7 +139,7 @@ const SignupForm = () => {
             )}
           />
           <Button type="submit" className="shad-button_primary">
-            {isLoading ? (
+            {isCreatingAccount ? (
               <div className="flex-center gap-2">
                 <Loader className="mr-2"/>Loading...
               </div>
